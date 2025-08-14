@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Waileent — Статический кабинет ключей</title>
+  <style>
+    body{font-family:Inter,Segoe UI,Arial;background:#0f1724;color:#e6eef8;margin:0;padding:24px}
+    .wrap{max-width:960px;margin:0 auto}
+    h1{margin:0 0 10px;color:#fff}
+    .panel{background:#0b1220;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,.6);margin-bottom:16px}
+    .row{display:flex;gap:12px;align-items:center}
+    input,select,button,textarea{padding:8px 10px;border-radius:8px;border:1px solid #192431;background:#07101a;color:#e6eef8}
+    button{cursor:pointer;border:none}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px;border-bottom:1px solid #12202c;text-align:left;font-size:14px}
+    th{color:#9fb0c8;font-weight:600}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:13px}
+    .kind-1m{background:#083c2f;color:#9ff0d3}
+    .kind-3m{background:#2b3b6b;color:#cfe1ff}
+    .kind-1y{background:#5a3b11;color:#ffe8c2}
+    .kind-forever{background:#3b2b6b;color:#e7d7ff}
+    .muted{color:#8fa3bb;font-size:13px}
+    .small{font-size:13px;color:#9fb0c8}
+    .danger{color:#ff9b9b}
+    .success{color:#9bffcf}
+    .flex{display:flex;gap:8px;align-items:center}
+    .spacer{height:12px}
+    footer{margin-top:18px;color:#6f8aa6;font-size:13px;text-align:center}
+    @media (max-width:640px){.row{flex-direction:column;align-items:stretch}}
+    .btn-reset{background:#8e44ad;color:#fff;margin-right:4px}
+    .btn-delete{background:#b03a2e;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Waileent — Статический кабинет ключей</h1>
+
+    <div class="panel">
+      <div class="row">
+        <div style="flex:1">
+          <div class="small">HWID (используется для активации)</div>
+          <input id="hwidInput" placeholder="введите HWID или сгенерировать" />
+        </div>
+        <div style="width:200px">
+          <div class="small">Ключ для активации</div>
+          <input id="keyInput" placeholder="AAAA-BBBB-CCCC-DDDD" />
+        </div>
+        <div style="width:130px;display:flex;flex-direction:column">
+          <div class="small">&nbsp;</div>
+          <button id="activateBtn" style="background:#1f7aef;color:#fff">Активировать</button>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div id="activationResult" class="muted">Результат активации появится здесь.</div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="small">Список ключей (локально в браузере)</div>
+          <div class="muted">Админ может создавать/удалять ключи (через кнопку «Админ»)</div>
+        </div>
+        <div class="flex">
+          <button id="adminBtn" style="background:#2a2a2a;color:#fff">Админ</button>
+          <button id="refreshBtn" style="background:#0d6b45;color:#fff">Обновить</button>
+        </div>
+      </div>
+
+      <table id="keysTable">
+        <thead>
+          <tr><th>Ключ</th><th>Тип</th><th>Активирован</th><th>HWID</th><th>Истекает</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="spacer"></div>
+      <div class="muted">Подсказка: это статический демонстрационный сайт — данные хранятся в localStorage браузера.</div>
+    </div>
+
+    <footer>Скачать этот файл и открыть в браузере. Редактируй список ключей через кнопку <b>Админ</b>.</footer>
+  </div>
+
+  <!-- Админное модальное -->
+  <div id="adminModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.6);">
+    <div style="background:#07101a;padding:18px;border-radius:12px;max-width:560px;width:100%">
+      <h3 style="margin:0 0 8px;color:#fff">Админ — создать/удалить ключ</h3>
+      <div class="small muted">Пароль админа (по умолчанию: <code>admin</code>)</div>
+      <div class="spacer"></div>
+      <div class="row">
+        <input id="adminPass" placeholder="админ пароль" style="flex:1" />
+      </div>
+      <div class="spacer"></div>
+
+      <div class="row">
+        <input id="newKeyInput" placeholder="Можно оставить пустым — будет сгенерирован" style="flex:1" />
+        <select id="newKind">
+          <option value="1m">1 месяц</option>
+          <option value="3m">3 месяца</option>
+          <option value="1y">1 год</option>
+          <option value="forever">Навсегда</option>
+        </select>
+        <button id="createKeyBtn" style="background:#1f7aef;color:#fff">Создать</button>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="small muted">Существующие ключи:</div>
+      <div style="max-height:240px;overflow:auto;margin-top:8px">
+        <table id="adminKeysTable" style="width:100%">
+          <thead><tr><th>Ключ</th><th>Тип</th><th>Активирован</th><th>HWID</th><th>Истекает</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px">
+        <button id="closeAdmin" style="background:#2a2a2a;color:#fff">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function genKey() {
+      const parts = [];
+      for (let i=0;i<4;i++){ parts.push(Math.random().toString(16).substr(2,4).toUpperCase()); }
+      return parts.join('-');
+    }
+    function nowIso(){ return new Date().toISOString(); }
+    function getLocalData(){
+      try { return JSON.parse(localStorage.getItem('waileent_keys') || 'null') || {keys:[]}; }
+      catch(e){ return {keys:[]}; }
+    }
+    function saveLocalData(dt){ localStorage.setItem('waileent_keys', JSON.stringify(dt)); }
+
+    (function ensureInitial(){
+      const data = getLocalData();
+      if (data.keys.length === 0){
+        data.keys.push(
+          {key: genKey(), kind:'1m', created: nowIso(), activated:false, hwid:null, expire:null},
+          {key: genKey(), kind:'3m', created: nowIso(), activated:false, hwid:null, expire:null},
+          {key: genKey(), kind:'1y', created: nowIso(), activated:false, hwid:null, expire:null},
+          {key: genKey(), kind:'forever', created: nowIso(), activated:false, hwid:null, expire:null}
+        );
+        saveLocalData(data);
+      }
+    })();
+
+    const keysTableBody = document.querySelector('#keysTable tbody');
+    const adminKeysBody = document.querySelector('#adminKeysTable tbody');
+    const activationResult = document.getElementById('activationResult');
+    const hwidInput = document.getElementById('hwidInput');
+    const keyInput = document.getElementById('keyInput');
+
+    function renderTables(){
+      const data = getLocalData();
+      keysTableBody.innerHTML = '';
+      adminKeysBody.innerHTML = '';
+      data.keys.forEach(k=>{
+        // обычная таблица
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family:monospace">${k.key}</td>
+          <td><span class="badge kind-${k.kind}">${labelForKind(k.kind)}</span></td>
+          <td>${k.activated ? '<span class="success">Да</span>' : '<span class="danger">Нет</span>'}</td>
+          <td style="font-family:monospace">${k.hwid || '-'}</td>
+          <td>${k.expire ? new Date(k.expire).toLocaleString() : (k.kind==='forever' ? 'Навсегда' : '-')}</td>
+          <td></td>
+        `;
+        if (k.hwid) {
+          const resetBtn = document.createElement('button');
+          resetBtn.textContent = 'Сброс HWID';
+          resetBtn.className = 'btn-reset';
+          resetBtn.onclick = ()=>{ if(confirm('Сбросить HWID?')) resetHwid(k.key); };
+          tr.querySelector('td:last-child').appendChild(resetBtn);
+        }
+        keysTableBody.appendChild(tr);
+
+        // админ таблица
+        const tr2 = tr.cloneNode(true);
+        const cell = tr2.querySelector('td:last-child');
+        cell.innerHTML = '';
+        if (k.hwid) {
+          const resetBtn = document.createElement('button');
+          resetBtn.textContent = 'Сброс HWID';
+          resetBtn.className = 'btn-reset';
+          resetBtn.onclick = ()=>{ if(confirm('Сбросить HWID?')) resetHwid(k.key); };
+          cell.appendChild(resetBtn);
+        }
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Удалить';
+        delBtn.className = 'btn-delete';
+        delBtn.onclick = ()=>{ if(confirm('Удалить ключ?')) deleteKey(k.key); };
+        cell.appendChild(delBtn);
+        adminKeysBody.appendChild(tr2);
+      });
+    }
+
+    function labelForKind(k){
+      if (k==='1m') return '1 месяц';
+      if (k==='3m') return '3 месяца';
+      if (k==='1y') return '1 год';
+      if (k==='forever') return 'Навсегда';
+      return k;
+    }
+
+    function deleteKey(key){
+      const d = getLocalData();
+      d.keys = d.keys.filter(x=>x.key !== key);
+      saveLocalData(d);
+      renderTables();
+    }
+
+    function resetHwid(key) {
+      const d = getLocalData();
+      const obj = d.keys.find(x => x.key === key);
+      if (obj) {
+        obj.hwid = null;
+        obj.activated = false;
+        obj.expire = null;
+        saveLocalData(d);
+        renderTables();
+        alert('HWID успешно сброшен.');
+      }
+    }
+
+    function findKeyObject(key){
+      const d = getLocalData();
+      return d.keys.find(x=>x.key.toUpperCase()===key.toUpperCase());
+    }
+
+    function activateKey(key, hwid){
+      const obj = findKeyObject(key);
+      if (!obj) return {ok:false,error:'Ключ не найден'};
+      if (obj.activated && obj.hwid && obj.hwid !== hwid) return {ok:false,error:'Ключ уже привязан к другому HWID'};
+      let expire = obj.expire;
+      if (obj.kind !== 'forever'){
+        const days = obj.kind==='1m' ? 30 : obj.kind==='3m' ? 90 : obj.kind==='1y' ? 365 : 30;
+        const base = obj.expire ? new Date(obj.expire) : new Date();
+        const newExpire = new Date(base.getTime());
+        newExpire.setDate(base.getDate() + days);
+        expire = newExpire.toISOString();
+      } else {
+        expire = null;
+      }
+      obj.activated = true;
+      obj.hwid = hwid;
+      obj.expire = expire;
+      saveLocalData(getLocalData());
+      renderTables();
+      return {ok:true, expire: expire};
+    }
+
+    document.getElementById('activateBtn').onclick = ()=>{
+      const key = keyInput.value.trim();
+      const hwid = hwidInput.value.trim();
+      if (!key || !hwid){ activationResult.textContent = 'Введите HWID и ключ.'; return; }
+      const res = activateKey(key, hwid);
+      if (!res.ok){ activationResult.innerHTML = '<span class="danger">'+res.error+'</span>'; }
+      else {
+        activationResult.innerHTML = '<span class="success">Активация успешна. Истекает: </span> ' + (res.expire ? new Date(res.expire).toLocaleString() : 'Навсегда');
+      }
+    };
+
+    document.getElementById('refreshBtn').onclick = renderTables;
+    document.getElementById('adminBtn').onclick = ()=>{ adminModal.style.display = 'flex'; renderTables(); };
+    document.getElementById('closeAdmin').onclick = ()=>{ adminModal.style.display = 'none'; };
+
+    document.getElementById('createKeyBtn').onclick = ()=>{
+      const pass = document.getElementById('adminPass').value;
+      if (pass !== 'admin'){ alert('Неверный пароль админа (по умолчанию: admin)'); return; }
+      const supplied = document.getElementById('newKeyInput').value.trim();
+      const key = supplied || genKey();
+      const kind = document.getElementById('newKind').value;
+      const d = getLocalData();
+      if (d.keys.find(x=>x.key===key)){ alert('Ключ уже существует'); return; }
+      d.keys.unshift({key: key.toUpperCase(), kind: kind, created: nowIso(), activated:false, hwid:null, expire:null});
+      saveLocalData(d);
+      document.getElementById('newKeyInput').value = '';
+      renderTables();
+    };
+
+    function genHwidSimple(){
+      let hw = localStorage.getItem('waileent_demo_hwid');
+      if (!hw){
+        hw = 'HWID-' + Math.random().toString(36).substr(2,10).toUpperCase();
+        localStorage.setItem('waileent_demo_hwid', hw);
+      }
+      return hw;
+    }
+    if (!hwidInput.value) hwidInput.value = genHwidSimple();
+    renderTables();
+  </script>
+</body>
+</html>
